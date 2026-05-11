@@ -1,24 +1,71 @@
-// Import necessary hooks and functions from React.
 import { useContext, useReducer, createContext } from "react";
-import storeReducer, { initialStore } from "../store"  // Import the reducer and the initial state.
+import storeReducer, { initialStore } from "../store";
 
-// Create a context to hold the global state of the application
-// We will call this global state the "store" to avoid confusion while using local states
-const StoreContext = createContext()
+const StoreContext = createContext();
 
-// Define a provider component that encapsulates the store and warps it in a context provider to 
-// broadcast the information throught all the app pages and components.
 export function StoreProvider({ children }) {
-    // Initialize reducer with the initial state.
-    const [store, dispatch] = useReducer(storeReducer, initialStore())
-    // Provide the store and dispatch method to all child components.
-    return <StoreContext.Provider value={{ store, dispatch }}>
-        {children}
+  const [store, dispatch] = useReducer(storeReducer, initialStore());
+
+  return (
+    <StoreContext.Provider value={{ store, dispatch }}>
+      {children}
     </StoreContext.Provider>
+  );
 }
 
-// Custom hook to access the global state and dispatch function.
 export default function useGlobalReducer() {
-    const { dispatch, store } = useContext(StoreContext)
-    return { dispatch, store };
+  const { store, dispatch } = useContext(StoreContext);
+
+  const SLUG = "Fabrizzio";
+
+  const BASE_URL =
+    `https://playground.4geeks.com/contact/agendas/${SLUG}/contacts`;
+
+  const getContacts = async () => {
+    const resp = await fetch(BASE_URL);
+    const data = await resp.json();
+
+    dispatch({
+      type: "set_contacts",
+      payload: data.contacts || []
+    });
+  };
+
+  const createContact = async (contact) => {
+    await fetch(BASE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(contact)
+    });
+
+    await getContacts();
+  };
+
+  const updateContact = async (id, contact) => {
+    await fetch(`${BASE_URL}/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(contact)
+    });
+
+    await getContacts();
+  };
+
+  const deleteContact = async (id) => {
+    await fetch(`${BASE_URL}/${id}`, {
+      method: "DELETE"
+    });
+
+    await getContacts();
+  };
+
+  return {
+    store,
+    actions: {
+      getContacts,
+      createContact,
+      updateContact,
+      deleteContact
+    }
+  };
 }
